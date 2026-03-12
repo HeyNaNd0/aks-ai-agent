@@ -1,276 +1,204 @@
-# 🤖 AKS AI Monitoring Agent
+# AKS AI Monitoring Agent
 
-> An autonomous AI-powered agent that monitors your Azure Kubernetes Service cluster,
-> diagnoses problems using Claude AI, auto-remediates what it can, escalates what it can't,
-> and documents everything — all without you lifting a finger.
+An autonomous AI agent that monitors an Azure Kubernetes Service (AKS) cluster 24/7, diagnoses problems using Claude AI, and either fixes them automatically or escalates with a full action plan.
 
-[![CI/CD](https://github.com/YOUR_USERNAME/aks-ai-agent/actions/workflows/deploy.yml/badge.svg)](https://github.com/YOUR_USERNAME/aks-ai-agent/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+## Why I Built This
+
+I work AKS support every day. Customers come to me when their clusters break — but I only ever see the crisis, never the journey that got them there. I built this agent to understand what my customers experience: the full deployment lifecycle, the anxiety of watching pods crash in real time, and the challenge of figuring out whether a problem is your configuration or the Azure platform.
+
+This project gave me that perspective. It might give you something useful too.
 
 ---
 
-## ✨ What It Does
+## What It Does
 
-| Problem Detected | Agent Action |
+When a problem is detected the agent:
+
+1. **Determines the origin** — is this a configuration issue (your side) or an Azure platform issue (Microsoft's side)?
+2. **Auto-remediates if possible** — deletes crashloop pods, adjusts OOM memory limits, restarts deployments, cordons and drains nodes
+3. **Emails the admin** if human intervention is needed — with exact steps and kubectl commands
+4. **Opens an Azure Support case** and a **GitHub issue on the official AKS repo** for platform-level issues
+5. **Documents everything** — SQLite database with full audit trail and Markdown reports
+
+---
+
+## Architecture
+
+```
+monitor.py → diagnostics.py → remediation.py
+                            → notifier.py
+                            → documenter.py
+```
+
+| Module | Responsibility |
 |---|---|
-| Pod in CrashLoopBackOff | Deletes pod → K8s auto-recreates |
-| Pod OOMKilled | Patches deployment to increase memory limits |
-| ImagePullBackOff | Triggers rollout restart to re-authenticate |
-| NotReady node | Cordons + drains workloads to healthy nodes |
-| Node under pressure | Cordons node, prevents new scheduling |
-| Deployment unavailable | Triggers rollout restart |
-| PVC unbound | Documents + emails admin |
-| Azure platform issue | Opens Azure Support case + GitHub issue |
-| Any issue needing human | Emails admin with exact steps + commands |
-
-Everything is **documented** in a local SQLite database with full audit trail.
+| `monitor.py` | Collects cluster state every 5 minutes — nodes, pods, deployments, PVCs, events, HPAs, node pools, certificates |
+| `diagnostics.py` | Sends problems to Claude AI for diagnosis — returns origin, severity, auto-fixability, root cause, fix steps |
+| `remediation.py` | Executes auto-fixes and verifies them after 30 seconds |
+| `notifier.py` | HTML email via SMTP, Azure Support cases via REST API, GitHub issues |
+| `documenter.py` | SQLite database + Markdown reports |
 
 ---
 
-## 🏗️ Architecture
+## Stack
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                       AKS AI Agent                              │
-│                                                                 │
-│  ┌─────────────┐    ┌───────────────┐    ┌──────────────────┐  │
-│  │  monitor.py │───▶│diagnostics.py │───▶│ remediation.py   │  │
-│  │             │    │               │    │                  │  │
-│  │ Collects:   │    │ Claude AI:    │    │ Auto-fixes:      │  │
-│  │ • Nodes     │    │ • Root cause  │    │ • Delete pods    │  │
-│  │ • Pods      │    │ • Config vs   │    │ • Patch deploys  │  │
-│  │ • Deploys   │    │   Platform?   │    │ • Drain nodes    │  │
-│  │ • PVCs      │    │ • Auto-fix?   │    │ • Rollout restart│  │
-│  │ • Events    │    │ • Fix steps   │    └──────────────────┘  │
-│  │ • Azure API │    └───────────────┘           │              │
-│  └─────────────┘                                │              │
-│         │                                       ▼              │
-│         │                            ┌──────────────────────┐  │
-│         │                            │    notifier.py       │  │
-│         │                            │                      │  │
-│         │                            │ • Email admin        │  │
-│         │                            │ • Azure Support case │  │
-│         │                            │ • GitHub issue       │  │
-│         │                            └──────────────────────┘  │
-│         │                                       │              │
-│         └───────────────────────────────────────▼              │
-│                                      ┌──────────────────────┐  │
-│                                      │    documenter.py     │  │
-│                                      │                      │  │
-│                                      │ • SQLite database    │  │
-│                                      │ • Markdown reports   │  │
-│                                      │ • Audit trail        │  │
-│                                      └──────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-```
+- **Language:** Python 3.12
+- **AI:** Claude claude-opus-4-6 (Anthropic API)
+- **Cluster:** Azure Kubernetes Service
+- **Container Registry:** GitHub Container Registry (GHCR)
+- **CI/CD:** GitHub Actions (lint/test → build/push → deploy)
+- **Database:** SQLite
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
-Before deploying, you need:
-
-- **An AKS cluster** running in Azure
-- **An Azure Service Principal** with Contributor role on your resource group
-- **An Anthropic API key** (get one at [console.anthropic.com](https://console.anthropic.com))
-- **A GitHub Personal Access Token** with `repo` and `issues` scope
-- **An email account** for sending notifications (Gmail App Password recommended)
-- **kubectl** installed and configured
-- **Docker** (for building the image locally, optional)
+- Azure subscription with an AKS cluster
+- GitHub account
+- Anthropic API key (get one at [console.anthropic.com](https://console.anthropic.com))
+- Gmail account with 2FA enabled (for email notifications)
 
 ---
 
-## 🚀 Deployment Guide
+## Deployment
 
-### Step 1 — Fork and clone this repo
+### 1. Fork and clone the repo
 
 ```bash
-# Fork on GitHub first, then:
-git clone https://github.com/YOUR_USERNAME/aks-ai-agent.git
+git clone https://github.com/YOUR-USERNAME/aks-ai-agent.git
 cd aks-ai-agent
 ```
 
-### Step 2 — Create an Azure Service Principal
+### 2. Update config/config.yaml
 
-The agent needs this identity to talk to Azure APIs.
-
-```bash
-# Replace with your values
-SUBSCRIPTION_ID="your-subscription-id"
-RESOURCE_GROUP="your-resource-group"
-
-# Create the service principal
-az ad sp create-for-rbac \
-  --name "aks-ai-agent" \
-  --role Contributor \
-  --scopes /subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP
-
-# Output looks like:
-# {
-#   "appId": "CLIENT_ID",
-#   "password": "CLIENT_SECRET",
-#   "tenant": "TENANT_ID"
-# }
-```
-
-> **Keep the output** — you'll need `appId`, `password`, and `tenant`.
-
-### Step 3 — Add GitHub Actions Secrets
-
-Go to your forked repo → **Settings → Secrets and variables → Actions** → **New repository secret**
-
-Add these secrets:
-
-| Secret Name | Where to find it |
-|---|---|
-| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) → API Keys |
-| `AZURE_SUBSCRIPTION_ID` | Azure Portal → Subscriptions |
-| `AZURE_TENANT_ID` | From Step 2 output (`tenant`) |
-| `AZURE_CLIENT_ID` | From Step 2 output (`appId`) |
-| `AZURE_CLIENT_SECRET` | From Step 2 output (`password`) |
-| `ADMIN_EMAIL_PASSWORD` | Gmail: myaccount.google.com/apppasswords |
-| `AKS_CLUSTER_NAME` | Your AKS cluster name |
-| `AKS_RESOURCE_GROUP` | Your resource group name |
-| `GITHUB_TOKEN` | Auto-provided by GitHub Actions ✓ |
-
-### Step 4 — Edit the config file
-
-Edit `config/config.yaml` with your cluster details:
+Replace all placeholders with your real values:
 
 ```yaml
 cluster:
-  name: "your-aks-cluster-name"
-  resource_group: "your-resource-group"
+  name: "YOUR-AKS-CLUSTER-NAME"
+  resource_group: "YOUR-RESOURCE-GROUP"
 
 notifications:
-  admin_email: "you@yourcompany.com"
-  sender_email: "aks-agent@yourcompany.com"
+  admin_email: "your-email@gmail.com"
+  sender_email: "your-email@gmail.com"
 
 github:
-  issues_repo: "Azure/AKS"                  # For platform bugs
-  tracking_repo: "your-org/your-aks-issues" # Your internal tracking
+  tracking_repo: "YOUR-GITHUB-USERNAME/aks-ai-agent"
 ```
 
-Commit and push:
+### 3. Create an Azure service principal
+
 ```bash
-git add config/config.yaml
-git commit -m "Configure for my cluster"
-git push origin main
+MSYS_NO_PATHCONV=1 az ad sp create-for-rbac \
+  --name aks-ai-agent-sp \
+  --role Contributor \
+  --scopes /subscriptions/YOUR-SUBSCRIPTION-ID
 ```
 
-### Step 5 — Watch the pipeline run
+> **Windows users:** The `MSYS_NO_PATHCONV=1` prefix is required when using Git Bash to prevent path conversion issues.
 
-1. Go to **Actions** tab in your GitHub repo
-2. Watch the **Build, Test & Deploy AKS Agent** workflow
-3. It will:
-   - Run linting and unit tests
-   - Build and push a Docker image to GitHub Container Registry
-   - Deploy to your AKS cluster in the `aks-agent` namespace
+Save the output — you'll need `appId`, `password`, and `tenant`.
 
-### Step 6 — Verify the agent is running
+### 4. Create a Gmail App Password
+
+1. Enable 2-Step Verification at [myaccount.google.com/security](https://myaccount.google.com/security)
+2. Generate an app password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+3. Save the password **with spaces** exactly as shown — they are part of the format
+
+### 5. Add GitHub Secrets
+
+Go to your repo → Settings → Secrets and variables → Actions → New repository secret
+
+| Secret | Value |
+|---|---|
+| `AZURE_CLIENT_ID` | `appId` from Step 3 |
+| `AZURE_CLIENT_SECRET` | `password` from Step 3 |
+| `AZURE_TENANT_ID` | `tenant` from Step 3 |
+| `AZURE_SUBSCRIPTION_ID` | Your Azure subscription ID |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key |
+| `ADMIN_EMAIL_PASSWORD` | Gmail app password from Step 4 |
+| `GITHUB_TOKEN` | GitHub personal access token |
+
+### 6. Deploy
 
 ```bash
-# Check the pod is Running
+git add .
+git commit -m "configure: update config for my cluster"
+git push
+```
+
+The GitHub Actions pipeline handles the rest:
+- ✅ Lint and unit tests
+- ✅ Build and push Docker image to GHCR
+- ✅ Deploy to AKS
+
+---
+
+## Verify It's Running
+
+```bash
 kubectl get pods -n aks-agent
-
-# Expected output:
-# NAME                           READY   STATUS    RESTARTS   AGE
-# aks-ai-agent-xxxxxxxxx-xxxxx   1/1     Running   0          2m
-
-# Tail the logs to see it working
 kubectl logs -f -n aks-agent -l app=aks-ai-agent
+```
 
-# Expected log output:
-# 2024-01-01 00:00:00 | INFO     | aks-agent.main | ═══ AKS AI Agent starting up ═══
-# 2024-01-01 00:00:00 | INFO     | aks-agent.main | ▶ Starting monitoring cycle...
-# 2024-01-01 00:00:05 | INFO     | aks-agent.main | ✅ No problems detected. Cluster healthy.
+You should see:
+```
+✅ No problems detected. Cluster healthy.
+✅ Agent running. Press Ctrl+C to stop.
 ```
 
 ---
 
-## 🔧 Local Development
+## Test It
+
+Deploy a pod that crashes on purpose:
 
 ```bash
-# 1. Create virtual environment
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Copy and fill in .env
-cp .env.example .env
-# Edit .env with your real values
-
-# 4. Run the agent locally (uses your ~/.kube/config)
-python -m agent.main
-
-# 5. Run tests
-pytest tests/ -v
+kubectl run crash-test \
+  --image=busybox \
+  --restart=Always \
+  --namespace=default \
+  -- /bin/sh -c "exit 1"
 ```
 
----
+Within 5 minutes the agent will detect it, send it to Claude AI for diagnosis, and email you.
 
-## 📊 Viewing the Issue Database
-
-The agent stores all issues in `data/issues.db` (SQLite). View it with:
+Clean up after testing:
 
 ```bash
-# Copy the DB from the pod
-kubectl cp aks-agent/aks-ai-agent-xxx:/app/data/issues.db ./local-issues.db
-
-# Open with DB Browser for SQLite (GUI)
-# Download: sqlitebrowser.org
-
-# Or query directly
-sqlite3 local-issues.db "SELECT detected_at, problem_type, status, root_cause FROM issues ORDER BY detected_at DESC LIMIT 20;"
+kubectl delete pod crash-test -n default
 ```
 
 ---
 
-## 🔍 What Problems Are Detected
+## CI/CD Pipeline
 
-| Problem | Type | Default Severity |
-|---|---|---|
-| Node NotReady | `node_not_ready` | Critical |
-| Node memory/disk/PID pressure | `node_pressure` | High |
-| Pod CrashLoopBackOff | `pod_crashloop` | High |
-| Pod OOMKilled | `pod_oomkilled` | High |
-| Pod ImagePullBackOff | `pod_imagepull` | Medium |
-| Pod stuck Pending | `pod_pending` | Medium |
-| Deployment unavailable replicas | `deployment_unavailable` | High |
-| PVC not bound | `pvc_unbound` | High |
-| HPA unable to scale | `hpa_unable` | Medium |
-| Namespace quota near limit | `quota_near_limit` | Medium |
-| Certificate expiring | `certificate_expiring` | High |
-| Azure node pool failed | `azure_quota_exceeded` | Critical |
+The GitHub Actions pipeline has three jobs:
+
+```
+Lint & Tests → Build & Push → Deploy to AKS
+```
+
+Every push to `master` triggers a full deployment.
 
 ---
 
-## 🛡️ Security Notes
+## Security Notes
 
-- The agent **never reads Secret contents** — only metadata
-- All credentials are stored in Kubernetes Secrets, never in config files
-- The service account follows **least-privilege** RBAC
-- The container runs as a **non-root user** (UID 1000)
-- Destructive actions (drain, delete pod) are followed by **verification**
-
----
-
-## 📝 License
-
-MIT — use it, fork it, build on it. If it helps you, drop a ⭐ on the repo!
+- Never commit real values to `config/config.yaml` — use placeholders
+- All secrets are stored in GitHub Actions Secrets and injected at deploy time
+- The agent runs with least-privilege RBAC inside the cluster
+- Rotate credentials if they are ever exposed
 
 ---
 
-## 🤝 Contributing
+## Related
 
-Pull requests welcome. Please:
-1. Add tests for new problem types
-2. Document new auto-fix behaviors in `remediation.py`
-3. Update the problem table in this README
+- 📝 [Medium Article](https://medium.com/@0H_b0yy/im-an-aks-support-engineer-i-built-an-ai-monitoring-agent-to-see-what-my-customers-see-dfef7fa23971) — Full writeup including every error hit during deployment and what each one taught me
+- 🐦 Built by [@HeyNaNd0](https://github.com/HeyNaNd0)
 
 ---
 
-*Built with [Claude AI](https://claude.ai) by Anthropic — the AI that diagnoses its own cluster problems.*
+## License
+
+MIT
