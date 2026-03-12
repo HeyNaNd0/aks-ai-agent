@@ -8,8 +8,8 @@
 
 # ── Cluster identity ─────────────────────────────────────────
 cluster:
-  name: "my-aks-cluster"          # Your AKS cluster name in Azure
-  resource_group: "my-aks-rg"         # Azure resource group containing the cluster
+  name: "YOUR-AKS-CLUSTER-NAME"          # Your AKS cluster name in Azure
+  resource_group: "YOUR-RESOURCE-GROUP"         # Azure resource group containing the cluster
   # kubeconfig_path: null          # Leave null when running inside the cluster
   #                                  Set to "/path/to/kubeconfig" for local dev
 
