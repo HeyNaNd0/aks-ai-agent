@@ -1,0 +1,56 @@
+# ============================================================
+# AKS AI Monitoring Agent — Configuration
+# ============================================================
+# SAFE TO COMMIT: This file contains NO secrets.
+# All passwords, tokens, and keys go in environment variables.
+# See .env.example for required environment variables.
+# ============================================================
+
+# ── Cluster identity ─────────────────────────────────────────
+cluster:
+  name: "my-aks-cluster"          # Your AKS cluster name in Azure
+  resource_group: "my-rg"         # Azure resource group containing the cluster
+  # kubeconfig_path: null          # Leave null when running inside the cluster
+  #                                  Set to "/path/to/kubeconfig" for local dev
+
+# ── Monitoring behavior ──────────────────────────────────────
+monitoring:
+  interval_seconds: 300           # Run a full check every 5 minutes
+  namespaces:                     # Namespaces to monitor (add yours here)
+    - default
+    - kube-system
+    - production
+    - staging
+
+# ── Alert thresholds ─────────────────────────────────────────
+thresholds:
+  cpu_percent: 85.0               # Alert when node CPU > 85%
+  memory_percent: 85.0            # Alert when node memory > 85%
+  pod_restart_count: 5            # Alert when pod restarts exceed this
+  node_not_ready_seconds: 120     # Alert when node is NotReady > 2 minutes
+
+# ── Azure settings ────────────────────────────────────────────
+azure:
+  support_plan: "Developer"       # Your Azure support plan tier
+  #   Options: Developer | Standard | Professional Direct | Premier
+
+# ── Claude AI settings ───────────────────────────────────────
+ai:
+  model: "claude-opus-4-6"        # Claude model for diagnosis
+  max_tokens: 4096
+
+# ── Email notifications ───────────────────────────────────────
+notifications:
+  admin_email: "your-email@gmail.com"     # Who receives alerts
+  sender_email: "your-email@gmail.com" # Who the email is from
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 587
+
+# ── GitHub ────────────────────────────────────────────────────
+github:
+  issues_repo: "Azure/AKS"                  # Where platform bugs get reported
+  tracking_repo: "your-org/your-aks-issues" # Your internal tracking repo
+
+# ── Database ──────────────────────────────────────────────────
+database:
+  path: "data/issues.db"          # SQLite DB path (use PVC mount in K8s)
