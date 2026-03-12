@@ -1,0 +1,165 @@
+# ============================================================
+# AKS AI Agent — Kubernetes Deployment
+# ============================================================
+# Deploys the agent as a single-replica Deployment.
+# Uses a PersistentVolumeClaim to preserve the SQLite DB
+# across pod restarts and upgrades.
+#
+# Prerequisites (run these first):
+#   kubectl apply -f k8s/rbac.yaml
+#   kubectl apply -f k8s/secret.yaml    (with your actual secrets)
+#   kubectl apply -f k8s/configmap.yaml
+# ============================================================
+
+---
+# Namespace for the agent
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aks-agent
+  labels:
+    app: aks-ai-agent
+
+---
+# PersistentVolumeClaim — keeps the SQLite DB alive between restarts
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aks-agent-data
+  namespace: aks-agent
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: managed-csi        # AKS default Azure Disk storage class
+  resources:
+    requests:
+      storage: 5Gi                     # 5GB is plenty for years of issue logs
+
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aks-ai-agent
+  namespace: aks-agent
+  labels:
+    app: aks-ai-agent
+    version: "1.0.0"
+  annotations:
+    description: "AI-powered AKS cluster monitoring and auto-remediation agent"
+spec:
+  replicas: 1                          # Only ONE replica — avoid duplicate actions
+  selector:
+    matchLabels:
+      app: aks-ai-agent
+  strategy:
+    type: Recreate                     # Ensures no two agent instances run at once
+  template:
+    metadata:
+      labels:
+        app: aks-ai-agent
+      annotations:
+        prometheus.io/scrape: "false"  # Set to true if you add Prometheus metrics
+    spec:
+      serviceAccountName: aks-ai-agent
+
+      # Security context — non-root, read-only root filesystem
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: agent
+          image: ghcr.io/YOUR_GITHUB_USERNAME/aks-ai-agent:latest
+          imagePullPolicy: Always
+
+          # Resource limits — agent is lightweight
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          # Environment: config from ConfigMap, secrets from Secret
+          env:
+            - name: AKS_AGENT_CONFIG
+              value: "/app/config/config.yaml"
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: ANTHROPIC_API_KEY
+            - name: AZURE_SUBSCRIPTION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: AZURE_SUBSCRIPTION_ID
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: AZURE_TENANT_ID
+            - name: AZURE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: AZURE_CLIENT_ID
+            - name: AZURE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: AZURE_CLIENT_SECRET
+            - name: ADMIN_EMAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: ADMIN_EMAIL_PASSWORD
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: GITHUB_TOKEN
+
+          # Mount the config and persistent data volume
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            - name: data
+              mountPath: /app/data
+            - name: logs
+              mountPath: /app/logs
+
+          # Liveness probe — restart if agent locks up
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import os; os.stat('logs/agent.log')"
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            failureThreshold: 3
+
+      volumes:
+        - name: config
+          configMap:
+            name: aks-agent-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: aks-agent-data
+        - name: logs
+          emptyDir: {}
+
+      # Only run on system nodes (not your app workload nodes)
+      tolerations:
+        - key: "CriticalAddonsOnly"
+          operator: "Exists"
+      nodeSelector:
+        kubernetes.io/os: linux
+
+      # Restart policy
+      restartPolicy: Always

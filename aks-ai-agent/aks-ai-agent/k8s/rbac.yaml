@@ -1,0 +1,112 @@
+# ============================================================
+# AKS AI Agent — Kubernetes RBAC
+# ============================================================
+# The agent needs READ access to almost everything, and WRITE
+# access to a small set of resources for auto-remediation.
+#
+# Principle of least privilege:
+#   - Read all resources in monitored namespaces
+#   - Write only: pods (delete), deployments (patch), nodes (cordon)
+#   - No access to Secrets content (not needed for diagnosis)
+# ============================================================
+
+---
+# Service Account — the identity the agent runs as
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aks-ai-agent
+  namespace: aks-agent
+  labels:
+    app: aks-ai-agent
+
+---
+# ClusterRole — what permissions the agent has across the whole cluster
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aks-ai-agent-role
+  labels:
+    app: aks-ai-agent
+rules:
+  # ── Read-only cluster resources ─────────────────────────
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - namespaces
+      - events
+      - resourcequotas
+      - persistentvolumes
+    verbs: ["get", "list", "watch"]
+
+  # ── Read-only namespace resources ───────────────────────
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - pods/status
+      - services
+      - endpoints
+      - configmaps
+      - persistentvolumeclaims
+      - replicationcontrollers
+      - serviceaccounts
+    verbs: ["get", "list", "watch"]
+
+  # ── Apps resources ───────────────────────────────────────
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+      - replicasets
+      - statefulsets
+      - daemonsets
+    verbs: ["get", "list", "watch", "patch", "update"]
+
+  # ── Autoscaling ──────────────────────────────────────────
+  - apiGroups: ["autoscaling"]
+    resources:
+      - horizontalpodautoscalers
+    verbs: ["get", "list", "watch"]
+
+  # ── Pod operations (delete for crash-loop fix) ───────────
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs: ["delete"]
+
+  # ── Node operations (cordon = patch unschedulable) ───────
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs: ["patch", "update"]
+
+  # ── cert-manager CRDs (optional) ─────────────────────────
+  - apiGroups: ["cert-manager.io"]
+    resources:
+      - certificates
+      - certificaterequests
+    verbs: ["get", "list", "watch"]
+
+  # ── Policy / networking ───────────────────────────────────
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - ingresses
+      - networkpolicies
+    verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding — bind the role to the service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aks-ai-agent-binding
+  labels:
+    app: aks-ai-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: aks-ai-agent-role
+subjects:
+  - kind: ServiceAccount
+    name: aks-ai-agent
+    namespace: aks-agent

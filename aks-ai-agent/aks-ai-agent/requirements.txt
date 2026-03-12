@@ -1,0 +1,32 @@
+# ============================================================
+# AKS AI Agent — Python Dependencies
+# ============================================================
+
+# Kubernetes client
+kubernetes==29.0.0
+
+# Azure SDKs
+azure-identity==1.17.1
+azure-mgmt-containerservice==30.0.0
+azure-mgmt-support==6.0.0
+azure-mgmt-monitor==6.0.1
+azure-mgmt-resource==23.0.0
+
+# Anthropic (Claude AI)
+anthropic==0.28.0
+
+# GitHub API
+PyGithub==2.3.0
+
+# Scheduling
+schedule==1.2.1
+
+# YAML config
+PyYAML==6.0.1
+
+# HTTP (used internally by Azure SDK and for some direct calls)
+requests==2.32.3
+
+# Utilities
+python-dotenv==1.0.1   # Load .env files in development
+rich==13.7.1           # Pretty console output (optional but nice)
