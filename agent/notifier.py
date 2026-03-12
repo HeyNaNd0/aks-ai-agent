@@ -16,9 +16,8 @@ import textwrap
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
-import requests
 from github import Github, GithubException
 
 from agent.config import AgentConfig
@@ -214,7 +213,7 @@ class Notifier:
         """
         from azure.identity import ClientSecretCredential
         from azure.mgmt.support import MicrosoftSupport
-        from azure.mgmt.support.models import SupportTicketDetails, ContactProfile, ServiceLevelAgreement, TechnicalTicketDetails
+        from azure.mgmt.support.models import SupportTicketDetails, ContactProfile
 
         cred = ClientSecretCredential(
             tenant_id=self.cfg.azure_tenant_id,

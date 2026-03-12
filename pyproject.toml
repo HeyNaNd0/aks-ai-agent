@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aks-ai-agent"
+version = "1.0.0"
+description = "AI-powered AKS cluster monitoring agent"
+requires-python = ">=3.12"
+
+[tool.setuptools.packages.find]
+include = ["agent*"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

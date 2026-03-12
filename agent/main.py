@@ -12,7 +12,6 @@ Flow:
                                    →  documenter.py
 """
 
-import asyncio
 import logging
 import signal
 import sys

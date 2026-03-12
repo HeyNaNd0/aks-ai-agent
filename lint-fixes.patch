@@ -1,0 +1,154 @@
+diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+index 0856a1d..02dddd7 100644
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -28,6 +28,7 @@ jobs:
+           python -m pip install --upgrade pip
+           pip install ruff pytest
+           pip install -r requirements.txt
++          pip install -e .
+ 
+       - name: Run Ruff linter
+         run: ruff check agent/ tests/
+diff --git a/agent/documenter.py b/agent/documenter.py
+index 118ef82..cc3a5b5 100644
+--- a/agent/documenter.py
++++ b/agent/documenter.py
+@@ -18,11 +18,10 @@ Why SQLite?
+ 
+ import json
+ import logging
+-import os
+ import sqlite3
+ from datetime import datetime
+ from pathlib import Path
+-from typing import Any, Dict, Optional
++from typing import Dict, Optional
+ 
+ from agent.config import AgentConfig
+ 
+@@ -262,7 +261,7 @@ class Documenter:
+         """
+         now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+         lines = [
+-            f"# AKS Agent Issue Report\n",
++            "# AKS Agent Issue Report\n",
+             f"**Generated:** {now}  ",
+             f"**Cluster:** {self.cfg.cluster_name}\n",
+             "---\n",
+diff --git a/agent/main.py b/agent/main.py
+index 825ed0a..54e20a7 100644
+--- a/agent/main.py
++++ b/agent/main.py
+@@ -12,7 +12,6 @@ Flow:
+                                    →  documenter.py
+ """
+ 
+-import asyncio
+ import logging
+ import signal
+ import sys
+diff --git a/agent/monitor.py b/agent/monitor.py
+index 590d87c..39a1f1e 100644
+--- a/agent/monitor.py
++++ b/agent/monitor.py
+@@ -19,7 +19,7 @@ What we monitor:
+ 
+ import logging
+ from datetime import datetime, timezone
+-from typing import Any, Dict, List, Optional
++from typing import Any, Dict, List
+ 
+ from azure.identity import ClientSecretCredential
+ from azure.mgmt.containerservice import ContainerServiceClient
+@@ -351,7 +351,6 @@ class ClusterMonitor:
+         Returns a list of problem dicts that the AI will then diagnose.
+         """
+         problems = []
+-        now = datetime.now(timezone.utc)
+ 
+         # ── Nodes ─────────────────────────────────────────────────────────
+         for node in state["nodes"]:
+diff --git a/agent/notifier.py b/agent/notifier.py
+index 6f2f11c..b9faa5c 100644
+--- a/agent/notifier.py
++++ b/agent/notifier.py
+@@ -16,9 +16,8 @@ import textwrap
+ from datetime import datetime
+ from email.mime.multipart import MIMEMultipart
+ from email.mime.text import MIMEText
+-from typing import Any, Dict, Optional
++from typing import Dict, Optional
+ 
+-import requests
+ from github import Github, GithubException
+ 
+ from agent.config import AgentConfig
+@@ -214,7 +213,7 @@ class Notifier:
+         """
+         from azure.identity import ClientSecretCredential
+         from azure.mgmt.support import MicrosoftSupport
+-        from azure.mgmt.support.models import SupportTicketDetails, ContactProfile, ServiceLevelAgreement, TechnicalTicketDetails
++        from azure.mgmt.support.models import SupportTicketDetails, ContactProfile
+ 
+         cred = ClientSecretCredential(
+             tenant_id=self.cfg.azure_tenant_id,
+diff --git a/agent/remediation.py b/agent/remediation.py
+index d4d2383..623a634 100644
+--- a/agent/remediation.py
++++ b/agent/remediation.py
+@@ -403,9 +403,6 @@ class Remediator:
+ 
+             if ptype == "node_not_ready":
+                 node = self.core_v1.read_node(name=name)
+-                ready = next(
+-                    (c for c in node.status.conditions if c.type == "Ready"), None
+-                )
+                 # Even if still NotReady, cordon/drain is our action — verify cordon
+                 return node.spec.unschedulable is True
+ 
+diff --git a/tests/test_monitor.py b/tests/test_monitor.py
+index 6f9ab8f..cd74d3d 100644
+--- a/tests/test_monitor.py
++++ b/tests/test_monitor.py
+@@ -194,7 +194,6 @@ class TestDiagnosticsResponseParsing(unittest.TestCase):
+         return diag
+ 
+     def test_valid_json_parsed_correctly(self):
+-        from agent.diagnostics import Diagnostician
+         diag = self._make_diagnostician()
+         valid_response = json.dumps({
+             "origin": "configuration",
+@@ -216,7 +215,6 @@ class TestDiagnosticsResponseParsing(unittest.TestCase):
+         self.assertEqual(result["confidence"], 0.92)
+ 
+     def test_fallback_diagnosis_never_auto_fixes(self):
+-        from agent.diagnostics import Diagnostician
+         diag = self._make_diagnostician()
+         problem = {"type": "pod_crashloop", "summary": "test", "severity": "high"}
+         result = diag._fallback_diagnosis(problem, "API timeout")
+diff --git a/pyproject.toml b/pyproject.toml
+new file mode 100644
+index 0000000..ae33bf8
+--- /dev/null
++++ b/pyproject.toml
+@@ -0,0 +1,19 @@
++[build-system]
++requires = ["setuptools>=68.0", "wheel"]
++build-backend = "setuptools.build_meta"
++
++[project]
++name = "aks-ai-agent"
++version = "1.0.0"
++description = "AI-powered AKS cluster monitoring agent"
++requires-python = ">=3.12"
++
++[tool.setuptools.packages.find]
++include = ["agent*"]
++
++[tool.ruff]
++target-version = "py312"
++line-length = 120
++
++[tool.pytest.ini_options]
++testpaths = ["tests"]

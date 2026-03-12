@@ -19,7 +19,7 @@ What we monitor:
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from azure.identity import ClientSecretCredential
 from azure.mgmt.containerservice import ContainerServiceClient
@@ -351,7 +351,6 @@ class ClusterMonitor:
         Returns a list of problem dicts that the AI will then diagnose.
         """
         problems = []
-        now = datetime.now(timezone.utc)
 
         # ── Nodes ─────────────────────────────────────────────────────────
         for node in state["nodes"]:

@@ -194,7 +194,6 @@ class TestDiagnosticsResponseParsing(unittest.TestCase):
         return diag
 
     def test_valid_json_parsed_correctly(self):
-        from agent.diagnostics import Diagnostician
         diag = self._make_diagnostician()
         valid_response = json.dumps({
             "origin": "configuration",
@@ -216,7 +215,6 @@ class TestDiagnosticsResponseParsing(unittest.TestCase):
         self.assertEqual(result["confidence"], 0.92)
 
     def test_fallback_diagnosis_never_auto_fixes(self):
-        from agent.diagnostics import Diagnostician
         diag = self._make_diagnostician()
         problem = {"type": "pod_crashloop", "summary": "test", "severity": "high"}
         result = diag._fallback_diagnosis(problem, "API timeout")

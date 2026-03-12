@@ -403,9 +403,6 @@ class Remediator:
 
             if ptype == "node_not_ready":
                 node = self.core_v1.read_node(name=name)
-                ready = next(
-                    (c for c in node.status.conditions if c.type == "Ready"), None
-                )
                 # Even if still NotReady, cordon/drain is our action — verify cordon
                 return node.spec.unschedulable is True
 

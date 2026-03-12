@@ -18,11 +18,10 @@ Why SQLite?
 
 import json
 import logging
-import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from agent.config import AgentConfig
 
@@ -262,7 +261,7 @@ class Documenter:
         """
         now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
         lines = [
-            f"# AKS Agent Issue Report\n",
+            "# AKS Agent Issue Report\n",
             f"**Generated:** {now}  ",
             f"**Cluster:** {self.cfg.cluster_name}\n",
             "---\n",
