@@ -13,7 +13,8 @@ azure-mgmt-monitor==6.0.1
 azure-mgmt-resource==23.0.0
 
 # Anthropic (Claude AI)
-anthropic==0.28.0
+anthropic>=0.40.0
+httpx>=0.27.0,<0.28.0
 
 # GitHub API
 PyGithub==2.3.0
