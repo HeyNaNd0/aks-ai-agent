@@ -282,6 +282,43 @@ Every push to `master` triggers a full deployment.
 
 ---
 
+## Running the Tests
+
+The test suite covers rule-based problem detection (`TestProblemIdentification` — nodes, pods, PVCs, dedup, memory bump) and AI response parsing (`TestDiagnosticsResponseParsing` — valid JSON, fallback behaviour), all without requiring a real cluster or API key.
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run the tests:
+
+```bash
+python -m pytest tests/ -v
+```
+
+Expected output:
+
+```
+tests/test_monitor.py::TestProblemIdentification::test_crashloop_pod_detected PASSED
+tests/test_monitor.py::TestProblemIdentification::test_dedup_same_problem_not_doubled PASSED
+tests/test_monitor.py::TestProblemIdentification::test_healthy_cluster_returns_no_problems PASSED
+tests/test_monitor.py::TestProblemIdentification::test_imagepull_pod_detected PASSED
+tests/test_monitor.py::TestProblemIdentification::test_memory_bump_helper PASSED
+tests/test_monitor.py::TestProblemIdentification::test_notready_node_detected PASSED
+tests/test_monitor.py::TestProblemIdentification::test_oomkilled_pod_detected PASSED
+tests/test_monitor.py::TestProblemIdentification::test_unbound_pvc_detected PASSED
+tests/test_monitor.py::TestDiagnosticsResponseParsing::test_fallback_diagnosis_never_auto_fixes PASSED
+tests/test_monitor.py::TestDiagnosticsResponseParsing::test_valid_json_parsed_correctly PASSED
+
+10 passed
+```
+
+> The Pydantic warning about Python 3.14 compatibility (`PydanticDeprecatedSince20`) is harmless and can be ignored — it comes from a transitive dependency and does not affect any agent behaviour.
+
+---
+
 ## License
 
 MIT
