@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aks-agent-config
+  namespace: aks-agent
+  labels:
+    app.kubernetes.io/name: aks-ai-agent
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: aks-ai-agent-{{ .Chart.Version }}
+data:
+  config.yaml: |
+    cluster:
+      name: {{ .Values.cluster.name | quote }}
+      resource_group: {{ .Values.cluster.resourceGroup | quote }}
+
+    monitoring:
+      interval_seconds: {{ .Values.monitoring.intervalSeconds }}
+      namespaces:
+        - default
+        - kube-system
+        - production
+        - staging
+
+    thresholds:
+      cpu_percent: 85.0
+      memory_percent: 85.0
+      pod_restart_count: 5
+      node_not_ready_seconds: 120
+
+    azure:
+      support_plan: "Developer"
+
+    ai:
+      model: "claude-opus-4-6"
+      max_tokens: 4096
+
+    notifications:
+      admin_email: {{ .Values.notifications.adminEmail | quote }}
+      sender_email: {{ .Values.notifications.adminEmail | quote }}
+      smtp_host: "smtp.gmail.com"
+      smtp_port: 587
+
+    github:
+      issues_repo: "Azure/AKS"
+      tracking_repo: "your-org/your-aks-issues"
+
+    database:
+      path: "/app/data/agent.db"

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: aks-ai-agent
+version: 0.1.0
+description: "AI-powered AKS monitoring agent"
+type: application
+appVersion: "1.0.0"

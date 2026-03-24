@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aks-ai-agent
+  namespace: aks-agent
+  labels:
+    app.kubernetes.io/name: aks-ai-agent
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: aks-ai-agent-{{ .Chart.Version }}
+  annotations:
+    description: "AI-powered AKS cluster monitoring and auto-remediation agent"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: aks-ai-agent
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: aks-ai-agent
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: aks-ai-agent
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: agent
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: Always
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          env:
+            - name: AKS_AGENT_CONFIG
+              value: "/app/config/config.yaml"
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: ANTHROPIC_API_KEY
+            - name: AZURE_SUBSCRIPTION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: AZURE_SUBSCRIPTION_ID
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: AZURE_TENANT_ID
+            - name: AZURE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: AZURE_CLIENT_ID
+            - name: AZURE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: AZURE_CLIENT_SECRET
+            - name: ADMIN_EMAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: ADMIN_EMAIL_PASSWORD
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: aks-agent-secrets
+                  key: GITHUB_TOKEN
+
+          volumeMounts:
+            - name: config
+              mountPath: /app/config/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: data
+              mountPath: /app/data
+            - name: logs
+              mountPath: /app/logs
+
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import os; os.stat('logs/agent.log')"
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            failureThreshold: 3
+
+      volumes:
+        - name: config
+          configMap:
+            name: aks-agent-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: aks-agent-db
+        - name: logs
+          emptyDir: {}
+
+      tolerations:
+        - key: "CriticalAddonsOnly"
+          operator: "Exists"
+      nodeSelector:
+        kubernetes.io/os: linux
+
+      restartPolicy: Always

@@ -1,0 +1,39 @@
+# ── Cluster identity ──────────────────────────────────────────────────────────
+cluster:
+  name: ""
+  resourceGroup: ""
+  subscriptionId: ""
+
+# ── Azure service principal ────────────────────────────────────────────────────
+azure:
+  tenantId: ""
+  clientId: ""
+  clientSecret: ""
+
+# ── Anthropic API ──────────────────────────────────────────────────────────────
+anthropic:
+  apiKey: ""
+
+# ── Notifications ──────────────────────────────────────────────────────────────
+notifications:
+  adminEmail: ""
+  smtpPassword: ""
+  slackWebhook: ""        # optional
+
+# ── GitHub ─────────────────────────────────────────────────────────────────────
+github:
+  token: ""
+
+# ── Monitoring behaviour ───────────────────────────────────────────────────────
+monitoring:
+  intervalSeconds: 300
+
+# ── Persistent storage ─────────────────────────────────────────────────────────
+storage:
+  size: 1Gi
+  storageClass: managed-csi
+
+# ── Container image ────────────────────────────────────────────────────────────
+image:
+  repository: ghcr.io/heynand0/aks-ai-agent
+  tag: latest
