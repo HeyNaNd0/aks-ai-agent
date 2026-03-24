@@ -31,7 +31,7 @@ log = logging.getLogger("aks-agent.documenter")
 class Documenter:
     def __init__(self, cfg: AgentConfig):
         self.cfg = cfg
-        db_path = Path(cfg.db_path)
+        db_path = Path("/app/data/agent.db")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row

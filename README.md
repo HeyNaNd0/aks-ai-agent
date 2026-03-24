@@ -95,6 +95,8 @@ MSYS_NO_PATHCONV=1 az ad sp create-for-rbac \
   --scopes /subscriptions/YOUR-SUBSCRIPTION-ID
 ```
 
+> **Warning:** `Contributor` is overprivileged for this agent. It grants write access across your entire subscription. For a least-privilege setup, assign **Reader** plus **Azure Kubernetes Service Cluster User Role** instead — that is sufficient for cluster monitoring and kubeconfig retrieval.
+
 > **Windows users:** The `MSYS_NO_PATHCONV=1` prefix is required when using Git Bash to prevent path conversion issues.
 
 Save the output — you'll need `appId`, `password`, and `tenant`.
