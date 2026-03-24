@@ -18,7 +18,9 @@ What we monitor:
 """
 
 import logging
+import threading
 from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Dict, List
 
 from azure.identity import ClientSecretCredential
@@ -30,6 +32,36 @@ from kubernetes.client.rest import ApiException
 from agent.config import AgentConfig
 
 log = logging.getLogger("aks-agent.monitor")
+
+
+# ── Health server (/healthz · /readyz) ───────────────────────────────────────
+
+class _HealthHandler(BaseHTTPRequestHandler):
+    """Minimal HTTP handler that answers Kubernetes liveness and readiness probes."""
+
+    _ROUTES = {"/healthz": b"ok", "/readyz": b"ready"}
+
+    def do_GET(self):
+        body = self._ROUTES.get(self.path)
+        if body is None:
+            self.send_response(404)
+            self.end_headers()
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args):  # noqa: A002
+        pass  # suppress per-request access logs to keep agent output clean
+
+
+def _start_health_server(host: str = "0.0.0.0", port: int = 8080) -> None:
+    """Start the HTTP health server in a background daemon thread."""
+    server = HTTPServer((host, port), _HealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True, name="health-server")
+    thread.start()
+    log.info(f"Health server listening on {host}:{port} (/healthz, /readyz)")
 
 
 class ClusterMonitor:
@@ -51,6 +83,7 @@ class ClusterMonitor:
 
     def __init__(self, cfg: AgentConfig):
         self.cfg = cfg
+        _start_health_server()
         self._init_k8s_client()
         self._init_azure_client()
 

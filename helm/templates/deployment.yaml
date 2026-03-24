@@ -83,6 +83,10 @@ spec:
                   name: aks-agent-secrets
                   key: GITHUB_TOKEN
 
+          ports:
+            - containerPort: 8080
+              name: health
+
           volumeMounts:
             - name: config
               mountPath: /app/config/config.yaml
@@ -94,13 +98,19 @@ spec:
               mountPath: /app/logs
 
           livenessProbe:
-            exec:
-              command:
-                - python
-                - -c
-                - "import os; os.stat('logs/agent.log')"
-            initialDelaySeconds: 60
-            periodSeconds: 60
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
             failureThreshold: 3
 
       volumes:
