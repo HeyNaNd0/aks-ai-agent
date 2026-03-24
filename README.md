@@ -60,6 +60,87 @@ monitor.py → diagnostics.py → remediation.py
 
 ---
 
+## Deployment (Helm — Recommended)
+
+Helm is recommended over raw `kubectl apply` because it manages all resources as a single release, handles upgrades and rollbacks cleanly, and lets you supply secrets at install time without ever writing them to disk.
+
+### One-command install
+
+```bash
+helm install aks-ai-agent ./helm \
+  --namespace aks-agent \
+  --create-namespace \
+  --set cluster.name="my-aks-cluster" \
+  --set cluster.resourceGroup="my-rg" \
+  --set cluster.subscriptionId="YOUR-SUB-ID" \
+  --set azure.tenantId="YOUR-TENANT-ID" \
+  --set azure.clientId="YOUR-CLIENT-ID" \
+  --set azure.clientSecret="YOUR-CLIENT-SECRET" \
+  --set anthropic.apiKey="sk-ant-..." \
+  --set notifications.adminEmail="you@example.com" \
+  --set notifications.smtpPassword="YOUR-GMAIL-APP-PASSWORD" \
+  --set github.token="ghp_..."
+```
+
+### Recommended: values file
+
+For anything beyond a quick test, keep your values in a file so you aren't passing secrets on the command line.
+
+**`my-values.yaml`** (never commit this file):
+
+```yaml
+cluster:
+  name: "my-aks-cluster"
+  resourceGroup: "my-rg"
+  subscriptionId: "00000000-0000-0000-0000-000000000000"
+
+azure:
+  tenantId: "00000000-0000-0000-0000-000000000000"
+  clientId: "00000000-0000-0000-0000-000000000000"
+  clientSecret: "YOUR-CLIENT-SECRET"
+
+anthropic:
+  apiKey: "sk-ant-..."
+
+notifications:
+  adminEmail: "you@example.com"
+  smtpPassword: "YOUR-GMAIL-APP-PASSWORD"
+  slackWebhook: ""          # optional
+
+github:
+  token: "ghp_..."
+
+monitoring:
+  intervalSeconds: 300      # how often the agent polls the cluster
+
+storage:
+  size: 1Gi
+  storageClass: managed-csi
+
+image:
+  repository: ghcr.io/heynand0/aks-ai-agent
+  tag: latest
+```
+
+Then install with:
+
+```bash
+helm install aks-ai-agent ./helm \
+  --namespace aks-agent \
+  --create-namespace \
+  --values my-values.yaml
+```
+
+To upgrade after changing values:
+
+```bash
+helm upgrade aks-ai-agent ./helm --values my-values.yaml
+```
+
+> The raw `kubectl` method still works — see [Deployment (kubectl)](#deployment) below if you prefer it.
+
+---
+
 ## Deployment
 
 ### 1. Fork and clone the repo
