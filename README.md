@@ -327,6 +327,28 @@ tests/test_monitor.py::TestDiagnosticsResponseParsing::test_valid_json_parsed_co
 
 ---
 
+## Troubleshooting
+
+### CrashLoopBackOff — TypeError: unexpected keyword argument 'proxies'
+
+**Cause:** Version incompatibility between the Anthropic SDK and httpx. Newer versions of httpx removed the `proxies` argument that older Anthropic SDK versions pass internally.
+
+**Symptoms:**
+- Pod enters CrashLoopBackOff immediately on startup
+- Logs show: `TypeError: Client.__init__() got an unexpected keyword argument 'proxies'`
+
+**Fix:** Pull the latest code and rebuild your Docker image:
+
+```bash
+git pull
+docker build -t your-image:latest .
+kubectl rollout restart deployment/aks-ai-agent -n aks-agent
+```
+
+**Root cause fixed in:** `requirements.txt` — `anthropic` bumped to `>=0.40.0`, `httpx` pinned to `>=0.27.0,<0.28.0`
+
+---
+
 ## License
 
 MIT
