@@ -262,7 +262,15 @@ The GitHub Actions pipeline has three jobs:
 Lint & Tests → Build & Push → Deploy to AKS
 ```
 
-Every push to `master` triggers a full deployment.
+Every push to `master` runs lint and build. The deploy job is **skipped by default** — this lets you use the pipeline for CI (tests + image build) without needing a cluster configured.
+
+To enable deployment, go to your repo **Settings → Secrets and variables → Actions → Variables** and add:
+
+| Variable | Value |
+|---|---|
+| `DEPLOY_ENABLED` | `true` |
+
+Once set, every push to `master` will deploy to AKS.
 
 ---
 
