@@ -29,5 +29,5 @@ PyYAML==6.0.1
 requests==2.32.3
 
 # Utilities
-python-dotenv==1.0.1   # Load .env files in development
+python-dotenv==1.2.2   # Load .env files in development
 rich==13.7.1           # Pretty console output (optional but nice)
